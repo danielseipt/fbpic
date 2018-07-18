@@ -9,4 +9,9 @@ It defines the picmi interface
 # Define general variables that each PICMI code should define
 code = 'fbpic'
 
-__all__ = ['code']
+# Import object defined in other files
+from .grid import CylindricalGrid, ElectromagneticSolver, BinomialSmoother
+from .simulation import Simulation
+
+__all__ = ['code', 'CylindricalGrid', 'ElectromagneticSolver', 'Simulation', \
+            'BinomialSmoother' ]
