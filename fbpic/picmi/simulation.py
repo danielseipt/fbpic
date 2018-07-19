@@ -6,12 +6,16 @@ This file is part of the Fourier-Bessel Particle-In-Cell code (FB-PIC)
 
 It defines the picmi Simulation and CylindricalGrid interface
 """
+# Import relevant fbpic object
 from fbpic.main import Simulation as FBPICSimulation
 from fbpic.lpa_utils.laser import add_laser_pulse
+from fbpic.lpa_utils.laser import GaussianLaser as FBPIC_GaussianLaser
+# Import redefined picmi classes
+from .laser import LaserAntenna, LaserDirect, GaussianLaser
 
 class Simulation(FBPICSimulation):
 
-    def __init__(self, solver, dt=None, **kw ):
+    def __init__(self, solver, dt=None, gamma_boost=None, **kw ):
         """
         TODO
         """
@@ -27,6 +31,7 @@ class Simulation(FBPICSimulation):
             Nz=grid.nz, zmin=grid.zmin, zmax=grid.zmax,
             Nr=grid.nr, rmin=grid.rmin, rmax=grid.rmax,
             dt=dt, boundaries=grid.bc_zmin,
+            gamma_boost=gamma_boost,
             smoother=solver.source_smoother, **kw )
         # TODO: Not currently implemented in PICMI:
         # galilean, gamma_boost, verbose_level, use_all_mpi_ranks, use_cuda
@@ -35,8 +40,34 @@ class Simulation(FBPICSimulation):
         self.ptcl = []
 
 
-    def add_laser(self, laser, injection ):
+    def add_laser(self, laser, injection_method=None ):
+        """
+        TODO
 
-        if isinstance(injection, )
+        If injection_method is None, the default is laser antenna, in fbpic
+        """
+        # Convert injection method to corresponding fbpic arguments
+        if isinstance(injection_method, LaserAntenna):
+            method = 'antenna'
+            z0_antenna = injection_method.position[2]
+            v_antenna = injection_method.velocity[2]
+        elif (injection_method is None) or \
+                isinstance(injection_method, LaserDirect):
+            method = 'direct'
+            z0_antenna = None
+            v_antenna = None
+        else:
+            raise ValueError("`injection_method` of type %s is not implemented."
+                                %type(injection_method))
 
-        add_laser_pulse(self, laser, )
+        # Check that the laser profile
+        if isinstance(laser, GaussianLaser):
+            profile = FBPIC_GaussianLaser( )
+        else:
+            raise Value(
+                "`laser` of type %s is not recognized." %type(laser))
+
+        # Call the proper fbpic function
+        # (use the default `gamma_boost` of the simulation)
+        add_laser_pulse(self, profile, method=method, z0_antenna=z0_antenna,
+                        v_antenna=v_antenna, gamma_boost=self.gamma_boost)
