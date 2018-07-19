@@ -31,10 +31,9 @@ class Simulation(FBPICSimulation):
             Nz=grid.nz, zmin=grid.zmin, zmax=grid.zmax,
             Nr=grid.nr, rmin=grid.rmin, rmax=grid.rmax,
             dt=dt, boundaries=grid.bc_zmin,
-            gamma_boost=gamma_boost,
             smoother=solver.source_smoother, **kw )
         # TODO: Not currently implemented in PICMI:
-        # galilean, gamma_boost, verbose_level, use_all_mpi_ranks, use_cuda
+        # galilean, gamma_boost, particle_shape, verbose_level, use_all_mpi_ranks, use_cuda
 
         # Remove the default empty electron species in fbpic
         self.ptcl = []

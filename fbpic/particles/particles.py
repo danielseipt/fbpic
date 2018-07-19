@@ -47,115 +47,57 @@ if cuda_installed:
         get_cell_idx_per_particle, sort_particles_per_cell, \
         prefill_prefix_sum, incl_prefix_sum
 
-class Particles(object) :
+
+class Particles(object):
     """
-    Class that contains the particles data of the simulation
-
-    Main attributes
-    ---------------
-    - x, y, z : 1darrays containing the Cartesian positions
-                of the macroparticles (in meters)
-    - uz, uy, uz : 1darrays containing the unitless momenta
-                (i.e. px/mc, py/mc, pz/mc)
-    At the end or start of any PIC cycle, the momenta should be
-    one half-timestep *behind* the position.
+    Deprecated class
     """
-    def __init__(self, q, m, n, Npz, zmin, zmax,
-                    Npr, rmin, rmax, Nptheta, dt,
-                    ux_m=0., uy_m=0., uz_m=0.,
-                    ux_th=0., uy_th=0., uz_th=0.,
-                    dens_func=None, continuous_injection=True,
-                    grid_shape=None, particle_shape='linear',
-                    use_cuda=False, dz_particles=None ):
+    def __init__(self, *args, *kwargs):
+        raise ValueError(
+            'The `Particles` class is deprecated. Please use the method '
+            '`add_new_species` of the Simulation object instead.')
+
+
+class Species(self, particle_type=None, name=None, charge_state=None,
+             charge=None, mass=None, initial_distribution=None, **kw):
+    """
+    TODO
+    """
+    def __init__(self, particle_type=None, name=None, charge_state=None,
+                 charge=None, mass=None, initial_distribution=None, **kw):
         """
-        Initialize a uniform set of particles
-
-        Parameters
-        ----------
-        q : float (in Coulombs)
-           Charge of the particle species
-
-        m : float (in kg)
-           Mass of the particle species
-
-        n : float (in particles per m^3)
-           Peak density of particles
-
-        Npz : int
-           Number of macroparticles along the z axis
-
-        zmin, zmax : floats (in meters)
-           z positions between which the particles are initialized
-
-        Npr : int
-           Number of macroparticles along the r axis
-
-        rmin, rmax : floats (in meters)
-           r positions between which the particles are initialized
-
-        Nptheta : int
-           Number of macroparticules along theta
-
-        dt : float (in seconds)
-           The timestep for the particle pusher
-
-        ux_m, uy_m, uz_m: floats (dimensionless), optional
-           Normalized mean momenta of the injected particles in each direction
-
-        ux_th, uy_th, uz_th: floats (dimensionless), optional
-           Normalized thermal momenta in each direction
-
-        dens_func : callable, optional
-           A function of the form :
-           def dens_func( z, r ) ...
-           where z and r are 1d arrays, and which returns
-           a 1d array containing the density *relative to n*
-           (i.e. a number between 0 and 1) at the given positions
-
-        continuous_injection : bool, optional
-           Whether to continuously inject the particles,
-           in the case of a moving window
-
-        grid_shape: tuple, optional
-            Needed when running on the GPU
-            The shape of the local grid (including guard cells), i.e.
-            a tuple of the form (Nz, Nr). This is needed in order
-            to initialize the sorting of the particles per cell.
-
-        particle_shape: str, optional
-            Set the particle shape for the charge/current deposition.
-            Possible values are 'linear' and 'cubic' for first and third
-            order particle shape factors.
-
-        use_cuda : bool, optional
-            Wether to use the GPU or not.
-
-        dz_particles: float (in meter), optional
-            The spacing between particles in `z` (for continuous injection)
-            In most cases, the spacing between particles can be inferred
-            from the arguments `zmin`, `zmax` and `Npz`. However, when
-            there are no particles in the initial box (`Npz = 0`),
-            `dz_particles` needs to be explicitly passed.
+        TODO
         """
-        # Define whether or not to use the GPU
+        self.particle_type = particle_type
+        self.name = name
+        self.q = charge
+        self.m = mass
+        # TODO: Handle charge_state
+        self.charge_state = charge_state
+        # fbpic-specific attributes
+        self.Ntot = 0
+        # Attributes corresponding to the distribution
+        self.initial_distribution = initial_distribution
+
+
+    def _finalize_initialization(self, use_cuda, grid_shape, particle_shape,
+                                    dt, time, layout, comm, gamma_boost ):
+        """
+        TODO
+        This is called by the method `add_species` of the Simulation object
+        """
+        # Register the additional arguments
+        self.dt  # Necessary for the pusher
         self.use_cuda = use_cuda
-        if (self.use_cuda==True) and (cuda_installed==False) :
-            warnings.warn(
-                'Cuda not available for the particles.\n'
-                'Performing the particle operations on the CPU.')
-            self.use_cuda = False
+        self.particle_shape = particle_shape
 
-        # Generate evenly-spaced particles
-        Ntot, x, y, z, ux, uy, uz, inv_gamma, w = generate_evenly_spaced(
-            Npz, zmin, zmax, Npr, rmin, rmax, Nptheta, n, dens_func,
-            ux_m, uy_m, uz_m, ux_th, uy_th, uz_th )
+        # Initialize the particle injector
+        self.injector = ParticleInjector( self.initial_distribution,
+                        layout, comm, gamma_boost )
 
-        # Register the properties of the particles
-        # (Necessary for the pusher, and when adding more particles later, )
-        self.Ntot = Ntot
-        self.q = q
-        self.m = m
-        self.dt = dt
+        # Generate evenly-spaced particles at the initial time
+        Ntot, x, y, z, ux, uy, uz, inv_gamma, w = \
+            self.injector.generate_particles( time )
 
         # Register the particle arrarys
         self.x = x
@@ -175,18 +117,6 @@ class Particles(object) :
         self.Bx = np.zeros( Ntot )
         self.By = np.zeros( Ntot )
 
-        # The particle injector stores information that is useful in order
-        # continuously inject particles in the simulation, with moving window
-        self.continuous_injection = continuous_injection
-        if continuous_injection:
-            self.injector = ContinuousInjector( Npz, zmin, zmax, dz_particles,
-                                                Npr, rmin, rmax,
-                                                Nptheta, n, dens_func,
-                                                ux_m, uy_m, uz_m,
-                                                ux_th, uy_th, uz_th )
-        else:
-            self.injector = None
-
         # By default, there is no particle tracking (see method track)
         self.tracker = None
         # By default, the species experiences no elementary processes
@@ -196,9 +126,6 @@ class Particles(object) :
         # Total number of quantities (necessary in MPI communications)
         self.n_integer_quantities = 0
         self.n_float_quantities = 8 # x, y, z, ux, uy, uz, inv_gamma, w
-
-        # Register particle shape
-        self.particle_shape = particle_shape
 
         # Allocate arrays and register variables when using CUDA
         if self.use_cuda:
@@ -312,7 +239,7 @@ class Particles(object) :
         positions and number of macroparticles to be injected.
         """
         # This function should only be called if continuous injection is activated
-        assert self.continuous_injection == True
+        assert self.continuous_injection == True #TODO
 
         # Have the continuous injector generate the new particles
         Ntot, x, y, z, ux, uy, uz, inv_gamma, w = \

@@ -25,8 +25,9 @@ import numba
 import numpy as np
 from scipy.constants import m_e, m_p, e, c
 from .utils.printing import ProgressBar, print_simulation_setup
-from .particles import Particles
+from .particles import Species
 from .lpa_utils.boosted_frame import BoostConverter
+from .lpa_utils.bunch import get_space_charge_fields
 from .fields import Fields
 from .boundaries import BoundaryCommunicator, MovingWindow
 
@@ -815,8 +816,12 @@ class Simulation(object):
             continuous_injection = False
             dz_particles = 0.
 
+        # Create the initial distribution, and the layout
+        initial_distribution = None
+        layout = None
+
         # Create the new species
-        new_species = Particles( q=q, m=m, n=n, dens_func=dens_func,
+        new_species = Species( charge=q, mass=m, n=n, dens_func=dens_func,
                         Npz=Npz, zmin=p_zmin, zmax=p_zmax,
                         Npr=Npr, rmin=p_rmin, rmax=p_rmax,
                         Nptheta=p_nt, dt=self.dt,
@@ -827,9 +832,29 @@ class Simulation(object):
                         continuous_injection=continuous_injection,
                         dz_particles=dz_particles )
 
-        # Add it to the list of species and return it to the user
-        self.ptcl.append( new_species )
+        # Add the species to the simulation
+        self.add_species( species, layout, self.particle_shape )
+
+        # Return the species to the user
         return new_species
+
+
+    def add_species( self, species, layout, calculate_self_field=False ):
+        """
+        TODO
+        """
+        # Create the corresponding macroparticles
+        # and register the particle injector
+        species._finalize_initialization(
+            self.use_cuda, self.grid_shape, self.particle_shape, self.dt,
+            self.time, layout, self.comm, self.gamma_boost )
+
+        # Calculate the space-charge field, if requested by the user
+        if calculate_self_field:
+            get_space_charge_fields( sim, species )
+
+        # Add it to the list of species
+        self.ptcl.append( species )
 
 
     def set_moving_window( self, v=c, ux_m=None, uy_m=None, uz_m=None,
