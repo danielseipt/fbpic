@@ -11,8 +11,7 @@ from scipy.constants import e
 from .tracking import ParticleTracker
 from .elementary_process.ionization import Ionizer
 from .elementary_process.compton import ComptonScatterer
-from .injection import BallisticBeforePlane, ContinuousInjector, \
-                        generate_evenly_spaced
+from .injection import BallisticBeforePlane, ContinuousInjector
 
 # Load the numba methods
 from .push.numba_methods import push_p_numba, push_p_ioniz_numba, \
@@ -81,7 +80,7 @@ class Species(self, particle_type=None, name=None, charge_state=None,
 
 
     def _finalize_initialization(self, use_cuda, grid_shape, particle_shape,
-                                    dt, time, layout, comm, gamma_boost ):
+                dt, time, layout, comm, gamma_boost ):
         """
         TODO
         This is called by the method `add_species` of the Simulation object
@@ -91,15 +90,15 @@ class Species(self, particle_type=None, name=None, charge_state=None,
         self.use_cuda = use_cuda
         self.particle_shape = particle_shape
 
-        # Initialize the particle injector
-        self.injector = ParticleInjector( self.initial_distribution,
-                        layout, comm, gamma_boost )
-
-        # Generate evenly-spaced particles at the initial time
-        Ntot, x, y, z, ux, uy, uz, inv_gamma, w = \
-            self.injector.generate_particles( time )
+        # Generate the particles as indicated by the layout
+        # and initial_distribution
+        x, y, z, ux, uy, uz, inv_gamma, w = \
+            self.initial_distribution.generate_particles(
+                layout, comm, gamma_boost, time )
 
         # Register the particle arrarys
+        Ntot = len(w)
+        self.Ntot = Ntot
         self.x = x
         self.y = y
         self.z = z
@@ -116,6 +115,14 @@ class Species(self, particle_type=None, name=None, charge_state=None,
         self.Bz = np.zeros( Ntot )
         self.Bx = np.zeros( Ntot )
         self.By = np.zeros( Ntot )
+
+        # The particle injector stores information that is useful in order to
+        # continuously inject particles in the simulation, with moving window
+        self.continuous_injection = self.initial_distribution.fill_in
+        if self.continuous_injection:
+            self.injector = ContinuousInjector( layout, self.initial_distribution, ... )
+        else:
+            self.injector = None
 
         # By default, there is no particle tracking (see method track)
         self.tracker = None

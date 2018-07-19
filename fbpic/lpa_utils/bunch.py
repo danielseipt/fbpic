@@ -8,8 +8,6 @@ It defines a set of utilities for the initialization of an electron bunch.
 import numpy as np
 from scipy.constants import m_e, c, e, epsilon_0, mu_0
 from fbpic.fields import Fields
-from fbpic.particles.elementary_process.cuda_numba_utils import \
-    reallocate_and_copy_old
 from fbpic.particles.injection import BallisticBeforePlane
 
 def add_elec_bunch( sim, gamma0, n_e, p_zmin, p_zmax, p_rmin, p_rmax,
@@ -555,7 +553,7 @@ def get_space_charge_spect( spect, gamma, direction='forward',
 
     # Deduce the B field
     spect.Bp[:,:] += -0.5j*spect.kr * Az
-    spect.Bm[:,:] += -0.5j*spect.kr * Az    
+    spect.Bm[:,:] += -0.5j*spect.kr * Az
     if not neglect_transverse_currents:
         spect.Bp[:,:] += spect.kz * Ap
         spect.Bm[:,:] -= spect.kz * Am
