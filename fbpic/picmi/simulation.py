@@ -39,6 +39,9 @@ class Simulation(FBPICSimulation):
         # Remove the default empty electron species in fbpic
         self.ptcl = []
 
+        # Set the speed of the moving window
+        self.set_moving_window( grid.moving_window_velocity[2] )
+
 
     def add_laser(self, laser, injection_method=None ):
         """
