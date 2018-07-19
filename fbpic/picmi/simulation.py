@@ -60,11 +60,15 @@ class Simulation(FBPICSimulation):
             raise ValueError("`injection_method` of type %s is not implemented."
                                 %type(injection_method))
 
-        # Check that the laser profile
+        # Convert laser to corresponding fbpic profile
         if isinstance(laser, GaussianLaser):
-            profile = FBPIC_GaussianLaser( )
+            profile = FBPIC_GaussianLaser(
+                a0=laser.a0, waist=laser.waist, tau=laser.duration,
+                z0=laser.centroid_position[2], zf=laser.focal_position[2],
+                theta_pol=laser.polarization_angle, lambda0=laser.wavelength,
+                propagation_direction=laser.propagation_direction[2] )
         else:
-            raise Value(
+            raise ValueError(
                 "`laser` of type %s is not recognized." %type(laser))
 
         # Call the proper fbpic function
