@@ -5,6 +5,7 @@
 This file is part of the Fourier-Bessel Particle-In-Cell code (FB-PIC)
 It defines a set of numerical particle layout.
 """
+import warnings
 
 class PseudoRandomLayout( object ):
 
@@ -14,4 +15,16 @@ class PseudoRandomLayout( object ):
         """
         assert n_macroparticles is not None
         self.n_macroparticles = n_macroparticles
-        assert seed is None # Seed is currently not supported
+        if seed is not None:
+            warnings.warn('Fixing the seed is not supported in fbpic.')
+
+class GriddedLayout( object ):
+    """
+    TODO
+    """
+    def __init__(self, grid, n_macroparticle_per_cell, **kw):
+        self.grid = grid
+        self.n_macroparticle_per_cell = n_macroparticle_per_cell
+        assert 'r' in n_macroparticle_per_cell.keys()
+        assert 'z' in n_macroparticle_per_cell.keys()
+        assert 'theta' in n_macroparticle_per_cell.keys()

@@ -46,16 +46,6 @@ if cuda_installed:
         prefill_prefix_sum, incl_prefix_sum
 
 
-class Particles(object):
-    """
-    Deprecated class
-    """
-    def __init__(self, *args, **kwargs):
-        raise ValueError(
-            'The `Particles` class is deprecated. Please use the method '
-            '`add_new_species` of the Simulation object instead.')
-
-
 class Species(object):
     """
     TODO
@@ -74,7 +64,7 @@ class Species(object):
         # fbpic-specific attributes
         self.Ntot = 0
         # Attributes corresponding to the distribution
-        self.initial_distribution = initial_distribution
+        self.distribution = initial_distribution
 
 
     def _finalize_initialization(self, use_cuda, grid_shape, particle_shape,
@@ -88,11 +78,22 @@ class Species(object):
         self.use_cuda = use_cuda
         self.particle_shape = particle_shape
 
-        # Generate the particles as indicated by the layout
-        # and initial_distribution
-        x, y, z, ux, uy, uz, inv_gamma, w = \
-            self.initial_distribution.generate_particles(
-                layout, comm, gamma_boost, time )
+        # Handle generation of particles
+        if self.distribution is not None:
+            # Generate the particles in the initial box
+            x, y, z, ux, uy, uz, inv_gamma, w = self.distribution.generate_particles(
+                    layout, comm, gamma_boost, time )
+            # Register continuous injection if needed
+            self.continuous_injection = getattr( self.distribution, 'fill_in', False )
+            if self.continuous_injection:
+                self.injector = ContinuousInjector( self.distribution, layout, ... )
+            else:
+                self.injector = None
+
+        else:
+            x, y, z, ux, uy, uz, inv_gamma, w = [ np.empty(0) ]*8
+            self.continuous_injection = False
+            self.injector = None
 
         # Register the particle arrarys
         Ntot = len(w)
@@ -113,14 +114,6 @@ class Species(object):
         self.Bz = np.zeros( Ntot )
         self.Bx = np.zeros( Ntot )
         self.By = np.zeros( Ntot )
-
-        # The particle injector stores information that is useful in order to
-        # continuously inject particles in the simulation, with moving window
-        self.continuous_injection = self.initial_distribution.fill_in
-        if self.continuous_injection:
-            self.injector = ContinuousInjector( layout, self.initial_distribution, ... )
-        else:
-            self.injector = None
 
         # By default, there is no particle tracking (see method track)
         self.tracker = None
@@ -954,3 +947,13 @@ class Species(object):
             self.cell_idx, self.prefix_sum)
         # Rearrange the particle arrays
         self.rearrange_particle_arrays()
+
+
+class Particles(object):
+    """
+    Deprecated class
+    """
+    def __init__(self, *args, **kwargs):
+        raise ValueError(
+            'The `Particles` class is deprecated. Please use the method '
+            '`add_new_species` of the Simulation object instead.')

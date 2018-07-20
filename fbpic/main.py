@@ -26,6 +26,8 @@ import numpy as np
 from scipy.constants import m_e, m_p, e, c
 from .utils.printing import ProgressBar, print_simulation_setup
 from .particles import Species
+from .particles.injection.particle_layouts import GriddedLayout
+from .particles.injection.particle_distributions import PythonFunctionDistribution
 from .lpa_utils.boosted_frame import BoostConverter
 from .lpa_utils.bunch import get_space_charge_fields
 from .fields import Fields
@@ -753,51 +755,30 @@ class Simulation(object):
                     'If the density `n` is passed to `add_new_species`,\n'
                     'then the arguments `p_nz`, `p_nr` and `p_nt` need '
                     'to be passed too.')
-
             # Automatically convert input quantities to the boosted frame
             if self.boost is not None:
                 gamma_m = np.sqrt(1. + uz_m**2 + ux_m**2 + uy_m**2)
                 beta_m = uz_m/gamma_m
                 # Transform positions and density
-                p_zmin, p_zmax = self.boost.copropag_length(
-                    [ p_zmin, p_zmax ], beta_object=beta_m )
+                p_zmin, p_zmax = self.boost.copropag_length(                    [ p_zmin, p_zmax ], beta_object=beta_m )
                 n, = self.boost.copropag_density([ n ], beta_object=beta_m )
-                # Transform longitudinal thermal velocity
-                # The formulas below are approximate, and are obtained
-                # by perturbation of the Lorentz transform for uz
-                if uz_m == 0:
-                    if uz_th > 0.1:
-                        warnings.warn(
-                        "The thermal distribution is approximate in "
-                        "boosted-frame simulations, and may not be accurate "
-                        "enough for uz_th > 0.1")
-                    uz_th = self.boost.gamma0 * uz_th
-                else:
-                    if uz_th > 0.1 * uz_m:
-                        warnings.warn(
-                        "The thermal distribution is approximate in "
-                        "boosted-frame simulations, and may not be accurate "
-                        "enough for uz_th > 0.1 * uz_m")
-                    uz_th = self.boost.gamma0 * \
-                            (1. - self.boost.beta0*beta_m) * uz_th
-                # Finally transform the longitudinal momentum
-                uz_m = self.boost.gamma0*( uz_m - self.boost.beta0*gamma_m )
-
-            # Modify input particle bounds, in order to only initialize the
-            # particles in the local sub-domain
-            zmin_local_domain, zmax_local_domain = self.comm.get_zmin_zmax(
-                                        local=True, rank=self.comm.rank,
-                                        with_damp=False, with_guard=False )
-            p_zmin = max( zmin_local_domain, p_zmin )
-            p_zmax = min( zmax_local_domain, p_zmax )
-
-            # Modify again the input particle bounds, so that
-            # they fall exactly on the grid, and infer the number of particles
-            p_zmin, p_zmax, Npz = adapt_to_grid( self.fld.interp[0].z,
-                                p_zmin, p_zmax, p_nz )
-            p_rmin, p_rmax, Npr = adapt_to_grid( self.fld.interp[0].r,
-                                p_rmin, p_rmax, p_nr )
-            dz_particles = self.comm.dz/p_nz
+                uz_m, = self.boost.longitudinal_momentum([ uz_m ])
+            # Prepare the distribution
+            if dens_func is not None:
+                def density_function(x, y, z):
+                    return n*dens_func( np.sqrt(x**2+y**2), z )
+            else:
+                def density_function(x, y, z):
+                    return n*np.ones_like(z)
+            # TODO: Handle p_zmin, p_zmax, etc.
+            distribution = PythonFunctionDistribution(
+                density_function=density_function,
+                rms_velocity_spread = [ c*ux_th, c*uy_th, c*uz_th ],
+                directed_velocity = [ c*ux_m, c*uy_m, c*uz_m ] )
+            # Prepare the Layout
+            layout = GriddedLayout(
+                self.solver.grid, fill_in=continuous_injection,
+                n_macroparticle_per_cell={'r':p_nr, 'z':p_nz, 'theta':p_nt})
 
         else:
             # Check consistency of arguments
@@ -808,32 +789,14 @@ class Simulation(object):
                     '`p_nz`, `p_nr` or `p_nz`\nHowever no particle density '
                     '(`n` or `n_e`) was given.\nTherefore, no particles will'
                     'be created.')
-            # Convert arguments to acceptable arguments for `Particles`
-            # but which will result in no macroparticles being injected
-            n = 0
-            p_zmin = p_zmax = p_rmin = p_rmax = 0
-            Npz = Npr = p_nt = 0
-            continuous_injection = False
-            dz_particles = 0.
-
-        # Create the initial distribution, and the layout
-        initial_distribution = None
-        layout = None
+            initial_distribution = None
+            layout = None
 
         # Create the new species
-        new_species = Species( charge=q, mass=m, n=n, dens_func=dens_func,
-                        Npz=Npz, zmin=p_zmin, zmax=p_zmax,
-                        Npr=Npr, rmin=p_rmin, rmax=p_rmax,
-                        Nptheta=p_nt, dt=self.dt,
-                        particle_shape=self.particle_shape,
-                        use_cuda=self.use_cuda, grid_shape=self.grid_shape,
-                        ux_m=ux_m, uy_m=uy_m, uz_m=uz_m,
-                        ux_th=ux_th, uy_th=uy_th, uz_th=uz_th,
-                        continuous_injection=continuous_injection,
-                        dz_particles=dz_particles )
+        new_species = Species(charge=q, mass=m, initial_distribution=distribution)
 
         # Add the species to the simulation
-        self.add_species( new_species, layout, self.particle_shape )
+        self.add_species( new_species, layout )
 
         # Return the species to the user
         return new_species
@@ -853,7 +816,7 @@ class Simulation(object):
         if calculate_self_field:
             get_space_charge_fields( self, species )
 
-        # Add it to the list of species
+        # Add the new species to the list of species
         self.ptcl.append( species )
 
 
@@ -908,60 +871,3 @@ class Simulation(object):
             species.ux *= -1
             species.uy *= -1
             species.uz *= -1
-
-def adapt_to_grid( x, p_xmin, p_xmax, p_nx, ncells_empty=0 ):
-    """
-    Adapt p_xmin and p_xmax, so that they fall exactly on the grid x
-    Return the total number of particles, assuming p_nx particles
-    per gridpoint
-
-    Parameters
-    ----------
-    x: 1darray
-        The positions of the gridpoints along the x direction
-
-    p_xmin, p_xmax: float
-        The minimal and maximal position of the particles
-        These may not fall exactly on the grid
-
-    p_nx: int
-        Number of particle per gridpoint
-
-    ncells_empty: int
-        Number of empty cells at the righthand side of the box
-        (Typically used when using a moving window)
-
-    Returns
-    -------
-    A tuple with:
-       - p_xmin: a float that falls exactly on the grid
-       - p_xmax: a float that falls exactly on the grid
-       - Npx: the total number of particles
-    """
-
-    # Find the max and the step of the array
-    xmin = x.min()
-    xmax = x.max()
-    dx = x[1] - x[0]
-
-    # Do not load particles below the lower bound of the box
-    if p_xmin < xmin - 0.5*dx:
-        p_xmin = xmin - 0.5*dx
-    # Do not load particles in the two last upper cells
-    # (This is because the charge density may extend over these cells
-    # when it is smoothed. If particles are loaded closer to the right
-    # boundary, this extended charge density can wrap around and appear
-    # at the left boundary.)
-    if p_xmax > xmax + (0.5-ncells_empty)*dx:
-        p_xmax = xmax + (0.5-ncells_empty)*dx
-
-    # Find the gridpoints on which the particles should be loaded
-    x_load = x[ ( x > p_xmin ) & ( x < p_xmax ) ]
-    # Deduce the total number of particles
-    Npx = len(x_load) * p_nx
-    # Reajust p_xmin and p_xmanx so that they match the grid
-    if Npx > 0:
-        p_xmin = x_load.min() - 0.5*dx
-        p_xmax = x_load.max() + 0.5*dx
-
-    return( p_xmin, p_xmax, Npx )

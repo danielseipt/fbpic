@@ -1,5 +1,6 @@
 numpy
 scipy
 numba
+numexpr
 h5py
 python-dateutil
