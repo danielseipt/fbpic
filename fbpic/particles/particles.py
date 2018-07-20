@@ -5,7 +5,6 @@
 This file is part of the Fourier-Bessel Particle-In-Cell code (FB-PIC)
 It defines the structure and methods associated with the particles.
 """
-import warnings
 import numpy as np
 from scipy.constants import e
 from .tracking import ParticleTracker
@@ -51,14 +50,13 @@ class Particles(object):
     """
     Deprecated class
     """
-    def __init__(self, *args, *kwargs):
+    def __init__(self, *args, **kwargs):
         raise ValueError(
             'The `Particles` class is deprecated. Please use the method '
             '`add_new_species` of the Simulation object instead.')
 
 
-class Species(self, particle_type=None, name=None, charge_state=None,
-             charge=None, mass=None, initial_distribution=None, **kw):
+class Species(object):
     """
     TODO
     """

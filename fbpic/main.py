@@ -833,7 +833,7 @@ class Simulation(object):
                         dz_particles=dz_particles )
 
         # Add the species to the simulation
-        self.add_species( species, layout, self.particle_shape )
+        self.add_species( new_species, layout, self.particle_shape )
 
         # Return the species to the user
         return new_species
@@ -851,7 +851,7 @@ class Simulation(object):
 
         # Calculate the space-charge field, if requested by the user
         if calculate_self_field:
-            get_space_charge_fields( sim, species )
+            get_space_charge_fields( self, species )
 
         # Add it to the list of species
         self.ptcl.append( species )

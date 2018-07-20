@@ -44,7 +44,7 @@ class DistributionFromArrays( object ):
 
 class GaussianBunchDistribution(object):
 
-    def __init__(n_physical_particles, rms_bunch_size,
+    def __init__(self, n_physical_particles, rms_bunch_size,
         rms_velocity=[0.,0.,0.], centroid_position=[0.,0.,0.],
         centroid_velocity=[0.,0.,0.], velocity_divergence=[0.,0.,0.]):
         """
@@ -80,7 +80,7 @@ class GaussianBunchDistribution(object):
             w = self.n_physical_particles/N * np.ones(N)
 
             # Return the particle arrays
-            return boost_and_select( x, y, z, ux, uy, uz, comm, gamma_boost )
+            return boost_and_select(x, y, z, ux, uy, uz, w, comm, gamma_boost)
 
         else:
             raise ValueError('`layout` of type %s is not implemented '
@@ -120,7 +120,7 @@ def boost_and_select( x, y, z, ux, uy, uz, w, comm, gamma_boost ):
 
     # Select the particles that are in the local subdomain
     zmin, zmax = comm.get_zmin_zmax(
-        local=True, with_damp=False, with_guard=False, rank=sim.comm.rank )
+        local=True, with_damp=False, with_guard=False, rank=comm.rank )
     selected = (z >= zmin) & (z < zmax)
     x = x[selected]
     y = y[selected]
@@ -131,4 +131,4 @@ def boost_and_select( x, y, z, ux, uy, uz, w, comm, gamma_boost ):
     w = w[selected]
     inv_gamma = inv_gamma[selected]
 
-    return( x, y, z, ux, uy, uyz, inv_gamma, w )
+    return( x, y, z, ux, uy, uz, inv_gamma, w )
