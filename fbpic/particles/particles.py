@@ -74,7 +74,7 @@ class Species(object):
         This is called by the method `add_species` of the Simulation object
         """
         # Register the additional arguments
-        self.dt  # Necessary for the pusher
+        self.dt = dt  # Necessary for the pusher
         self.use_cuda = use_cuda
         self.particle_shape = particle_shape
 

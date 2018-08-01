@@ -227,6 +227,11 @@ class Simulation(object):
             self.boost = None
         # Register time step
         self.dt = dt
+        # Register the time and the iteration
+        self.time = 0.
+        self.iteration = 0
+        # Register the filtering flag
+        self.filter_currents = filter_currents
 
         # Initialize the boundary communicator
         self.comm = BoundaryCommunicator( Nz, zmin, zmax, Nr, rmax, Nm, dt,
@@ -260,12 +265,6 @@ class Simulation(object):
                               p_nz=p_nz, p_nr=p_nr, p_nt=p_nt,
                               p_zmin=p_zmin, p_zmax=p_zmax,
                               p_rmin=p_rmin, p_rmax=p_rmax )
-
-        # Register the time and the iteration
-        self.time = 0.
-        self.iteration = 0
-        # Register the filtering flag
-        self.filter_currents = filter_currents
 
         # Initialize an empty list of external fields
         self.external_fields = []
@@ -777,7 +776,7 @@ class Simulation(object):
                 directed_velocity = [ c*ux_m, c*uy_m, c*uz_m ] )
             # Prepare the Layout
             layout = GriddedLayout(
-                self.solver.grid, fill_in=continuous_injection,
+                fill_in=continuous_injection,
                 n_macroparticle_per_cell={'r':p_nr, 'z':p_nz, 'theta':p_nt})
 
         else:

@@ -4,5 +4,5 @@ It imports the Particles object from the particles package, so that
 this object can be used at a higher level.
 """
 
-from .particles import Particles
-__all__ = ['Particles']
+from .particles import Species, Particles
+__all__ = ['Species', 'Particles']

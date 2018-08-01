@@ -121,12 +121,13 @@ class BoundaryCommunicator(object):
         """
         # Initialize global number of cells and modes
         self.Nr = Nr
+        self.rmax = rmax
         self.Nm = Nm
         self._Nz_global_domain = Nz
         self._zmin_global_domain = zmin
-        # Get the distance dz between the cells
-        # (longitudinal spacing of the grid)
+        # Get the distance between the cells
         self.dz = (zmax - zmin)/self._Nz_global_domain
+        self.dr = rmax/Nr
 
         # MPI Setup
         self.use_all_mpi_ranks = use_all_mpi_ranks

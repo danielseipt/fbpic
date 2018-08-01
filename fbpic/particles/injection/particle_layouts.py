@@ -22,8 +22,7 @@ class GriddedLayout( object ):
     """
     TODO
     """
-    def __init__(self, grid, n_macroparticle_per_cell, **kw):
-        self.grid = grid
+    def __init__(self, n_macroparticle_per_cell, **kw):
         self.n_macroparticle_per_cell = n_macroparticle_per_cell
         assert 'r' in n_macroparticle_per_cell.keys()
         assert 'z' in n_macroparticle_per_cell.keys()
