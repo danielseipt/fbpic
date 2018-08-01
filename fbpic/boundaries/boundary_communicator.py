@@ -681,11 +681,10 @@ class BoundaryCommunicator(object):
         # When using a moving window, create new particles in recv_right
         # (Overlap this with the exchange of domains, since recv_right
         # will not be affected by the exchange at this open boundary)
-        if (self.moving_win is not None) \
-            and (self.rank == self.size-1) \
+        if (self.moving_win is not None) and (self.rank == self.size-1) \
             and species.continuous_injection:
             float_recv_right, uint_recv_right = \
-                species.generate_continuously_injected_particles( time )
+                species.generate_continuously_injected_particles( self, time )
 
         # Periodic boundary conditions for exchanging particles
         # Particles received at the right (resp. left) end of the simulation

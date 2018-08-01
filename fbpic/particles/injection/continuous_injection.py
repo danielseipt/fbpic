@@ -8,6 +8,7 @@ It defines a class for continuous particle injection with a moving window.
 import warnings
 import numpy as np
 from scipy.constants import c
+from .particle_layouts import GriddedLayout
 
 class ContinuousInjector( object ):
     """
@@ -15,8 +16,7 @@ class ContinuousInjector( object ):
     continuous injection by a moving window.
     """
 
-    def __init__(self, Npz, zmin, zmax, dz_particles, Npr, rmin, rmax,
-                Nptheta, n, dens_func, ux_m, uy_m, uz_m, ux_th, uy_th, uz_th ):
+    def __init__(self, distribution, layout, boost ):
         """
         Initialize continuous injection
 
@@ -24,32 +24,19 @@ class ContinuousInjector( object ):
         ----------
         See the docstring of the `Particles` object
         """
-        # Register properties of the injected plasma
-        self.Npr = Npr
-        self.rmin = rmin
-        self.rmax = rmax
-        self.Nptheta = Nptheta
-        self.n = n
-        self.dens_func = dens_func
-        self.ux_m = ux_m
-        self.uy_m = uy_m
-        self.uz_m = uz_m
-        self.ux_th = ux_th
-        self.uy_th = uy_th
-        self.uz_th = uz_th
-
-        # Register spacing between evenly-spaced particles in z
-        if Npz != 0:
-            self.dz_particles = (zmax - zmin)/Npz
+        # Register the spacing between particles in z
+        if isinstance( layout, GriddedLayout ):
+            self.dz_particles = comm.dz/layout.n_macroparticle_per_cell['z']
         else:
-            # Fall back to the user-provided `dz_particles`.
-            # Note: this is an optional argument of `Particles` and so
-            # it is not always available.
-            self.dz_particles = dz_particles
+            self.dz_particles = 0
+        # Register the boost
+        # (necessary when generating particles directly in the boosted frame)
+        self.boost = boost
 
         # Register variables that define the positions
         # where the plasma is injected.
-        self.v_end_plasma = c * uz_m / np.sqrt(1 + ux_m**2 + uy_m**2 + uz_m**2)
+        v_m = np.array( getattr(distribution, 'directed_velocity', [0,0,0]) )
+        self.v_end_plasma = v_m[2] / np.sqrt(1 + np.dot(v_m,v_m)/c**2)
         # These variables are set by `initialize_injection_positions`
         self.nz_inject = None
         self.z_inject = None
@@ -151,37 +138,27 @@ class ContinuousInjector( object ):
         self.z_end_plasma += nz_new * self.dz_particles
 
 
-    def generate_particles( self, time ):
+    def generate_particles( distribution, layout, comm, time ):
         """
         Generate new particles at the right end of the plasma
         (i.e. between z_end_plasma - nz_inject*dz and z_end_plasma)
+
+        TODO: update parameters
 
         Parameters
         ----------
         time: float (in second)
             The current physical time of the simulation
         """
-        # Create a temporary density function that takes into
-        # account the fact that the plasma has moved
-        if self.dens_func is not None:
-            def dens_func( z, r ):
-                return( self.dens_func( z-self.v_end_plasma*time, r ) )
-        else:
-            dens_func = None
-
         # Create new particle cells
         # Determine the positions between which new particles will be created
-        Npz = self.nz_inject
         zmax = self.z_end_plasma
         zmin = self.z_end_plasma - self.nz_inject*self.dz_particles
         # Create the particles
-        Ntot, x, y, z, ux, uy, uz, inv_gamma, w = generate_evenly_spaced(
-                Npz, zmin, zmax, self.Npr, self.rmin, self.rmax,
-                self.Nptheta, self.n, dens_func,
-                self.ux_m, self.uy_m, self.uz_m,
-                self.ux_th, self.uy_th, self.uz_th )
+        x, y, z, ux, uy, uz, inv_gamma, w = distribution.generate_particles(
+            layout, comm, self.boost, time, zmin, zmax)
 
         # Reset the number of particle cells to be created
         self.nz_inject = 0
 
-        return( Ntot, x, y, z, ux, uy, uz, inv_gamma, w )
+        return( x, y, z, ux, uy, uz, inv_gamma, w )

@@ -64,7 +64,7 @@ class Species(object):
         # fbpic-specific attributes
         self.Ntot = 0
         # Attributes corresponding to the distribution
-        self.distribution = initial_distribution
+        self.particle_distribution = initial_distribution
 
 
     def _finalize_initialization(self, use_cuda, grid_shape, particle_shape,
@@ -79,14 +79,16 @@ class Species(object):
         self.particle_shape = particle_shape
 
         # Handle generation of particles
-        if self.distribution is not None:
+        self.particle_layout = layout
+        dist = self.particle_distribution # Shortcut
+        if dist is not None:
             # Generate the particles in the initial box
-            x, y, z, ux, uy, uz, inv_gamma, w = self.distribution.generate_particles(
+            x, y, z, ux, uy, uz, inv_gamma, w = dist.generate_particles(
                     layout, comm, gamma_boost, time )
             # Register continuous injection if needed
-            self.continuous_injection = getattr( self.distribution, 'fill_in', False )
+            self.continuous_injection = getattr( dist, 'fill_in', False )
             if self.continuous_injection:
-                self.injector = ContinuousInjector( self.distribution, layout, ... )
+                self.injector = ContinuousInjector( dist, layout )
             else:
                 self.injector = None
 
@@ -228,7 +230,7 @@ class Species(object):
             if self.ionizer is not None:
                 self.ionizer.receive_from_gpu()
 
-    def generate_continuously_injected_particles( self, time ):
+    def generate_continuously_injected_particles( self, comm, time ):
         """
         Generate particles at the right end of the simulation boundary.
         (Typically, in the presence of a moving window.)
@@ -237,14 +239,15 @@ class Species(object):
         positions and number of macroparticles to be injected.
         """
         # This function should only be called if continuous injection is activated
-        assert self.continuous_injection == True #TODO
+        assert self.continuous_injection == True
 
         # Have the continuous injector generate the new particles
-        Ntot, x, y, z, ux, uy, uz, inv_gamma, w = \
-                            self.injector.generate_particles( time )
+        x, y, z, ux, uy, uz, inv_gamma, w = self.injector.generate_particles(
+                self.distribution, self.layout, comm, time )
 
         # Convert them to a particle buffer
         # - Float buffer
+        Ntot = len(w)
         float_buffer = np.empty((self.n_float_quantities,Ntot),dtype=np.float64)
         float_buffer[0,:] = x
         float_buffer[1,:] = y

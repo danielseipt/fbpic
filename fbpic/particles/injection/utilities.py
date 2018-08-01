@@ -50,7 +50,8 @@ def boost_and_select( x, y, z, ux, uy, uz, w, comm, boost ):
     return( x, y, z, ux, uy, uz, inv_gamma, w )
 
 
-def generate_evenly_spaced(dens_func, v_m, v_th, n_per_cell, comm, zmin, zmax):
+def generate_evenly_spaced(dens_func, t, v_m, v_th,
+                            n_per_cell, comm, zmin, zmax):
     """
     Generate evenly-spaced particles, according to the density function
     `dens_func`, and with the momenta given by the `v_m/v_th` arguments.
@@ -67,6 +68,9 @@ def generate_evenly_spaced(dens_func, v_m, v_th, n_per_cell, comm, zmin, zmax):
     Npz = n_per_cell['z'] * int( round( (zmax-zmin)/comm.dz ) )
     Npr = n_per_cell['r'] * int( round( comm.rmax/comm.dr ) )
     Nptheta = n_per_cell['theta']
+
+    # Calculate average velocity of the distribution (for time evolution)
+    v_avg = v_m[2]/np.sqrt( 1 + (v_m[0]**2+v_m[1]**2+v_m[2]**2)/c**2 )
 
     # Generate the particles and eliminate the ones that have zero weight ;
     # infer the number of particles Ntot
@@ -93,7 +97,7 @@ def generate_evenly_spaced(dens_func, v_m, v_th, n_per_cell, comm, zmin, zmax):
         z = zp.flatten()
         # Get the weights (i.e. charge of each macroparticle), which
         # are equal to the density times the volume r d\theta dr dz
-        w = r * dtheta*dr*dz * dens_func( z, r )
+        w = r * dtheta*dr*dz * dens_func( x, y, z - v_avg*t )
 
         # Select the particles that have a non-zero weight
         selected = (w > 0)

@@ -789,7 +789,7 @@ class Simulation(object):
                     '`p_nz`, `p_nr` or `p_nz`\nHowever no particle density '
                     '(`n` or `n_e`) was given.\nTherefore, no particles will'
                     'be created.')
-            initial_distribution = None
+            distribution = None
             layout = None
 
         # Create the new species

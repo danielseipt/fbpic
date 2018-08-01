@@ -30,7 +30,7 @@ class DistributionFromArrays( object ):
         self.uz = vz/c
         self.w = w
 
-    def generate_particles( self, layout, comm, boost, **kw ):
+    def generate_particles( self, layout, comm, boost, time, **kw ):
         """Returns x, y, z, ux, uy, uz, inv_gamma, w as arrays"""
 
         if layout is not None:
@@ -38,7 +38,7 @@ class DistributionFromArrays( object ):
                           'when using `DistributionFromArrays`.')
         return boost_and_select( self.x, self.y, self.z,
                 self.ux, self.uy, self.uz, self.w, comm, boost )
-
+            # TODO: Implement time
 
 class GaussianBunchDistribution(object):
 
@@ -56,7 +56,7 @@ class GaussianBunchDistribution(object):
         self.centroid_velocity = centroid_velocity
         self.velocity_divergence = velocity_divergence
 
-    def generate_particles( self, layout, comm, boost, **kw ):
+    def generate_particles( self, layout, comm, boost, time, **kw ):
         """Returns x, y, z, ux, uy, uz, inv_gamma, w as arrays"""
 
         # Randomly generate the bunch
@@ -79,6 +79,7 @@ class GaussianBunchDistribution(object):
 
             # Return the particle arrays
             return boost_and_select(x, y, z, ux, uy, uz, w, comm, boost)
+            # TODO: Implement time
 
         else:
             raise ValueError('`layout` of type %s is not implemented '
@@ -100,11 +101,12 @@ class PythonFunctionDistribution( object ):
         self.directed_velocity = directed_velocity
         self.fill_in = fill_in
 
-    def generate_particles( self, layout, comm, boost, zmin=None, zmax=None ):
+    def generate_particles( self, layout, comm, boost, time,
+                            zmin=None, zmax=None ):
         """Returns x, y, z, ux, uy, uz, inv_gamma, w as arrays"""
         if isinstance(layout, GriddedLayout):
 
-            return generate_evenly_spaced( self.density_function,
+            return generate_evenly_spaced( self.density_function, time,
                     self.directed_velocity, self.rms_velocity_spread,
                     layout.n_macroparticle_per_cell, comm, zmin, zmax )
 
