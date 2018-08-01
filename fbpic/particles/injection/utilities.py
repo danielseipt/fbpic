@@ -79,7 +79,7 @@ def generate_evenly_spaced(dens_func, t, v_m, v_th,
         dz = (zmax-zmin)*1./Npz
         z_reg =  zmin + dz*( np.arange(Npz) + 0.5 )
         dr = comm.rmax*1./Npr
-        r_reg =  rmin + dr*( np.arange(Npr) + 0.5 )
+        r_reg = dr*( np.arange(Npr) + 0.5 )
         dtheta = 2*np.pi/Nptheta
         theta_reg = dtheta * np.arange(Nptheta)
 

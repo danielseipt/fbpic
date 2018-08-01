@@ -5,7 +5,6 @@
 This file is part of the Fourier-Bessel Particle-In-Cell code (FB-PIC)
 It defines a class for continuous particle injection with a moving window.
 """
-import warnings
 import numpy as np
 from scipy.constants import c
 from .particle_layouts import GriddedLayout
@@ -16,13 +15,13 @@ class ContinuousInjector( object ):
     continuous injection by a moving window.
     """
 
-    def __init__(self, distribution, layout, boost ):
+    def __init__(self, distribution, layout, comm, boost ):
         """
         Initialize continuous injection
 
         Parameters
         ----------
-        See the docstring of the `Particles` object
+        #TODO add parameters
         """
         # Register the spacing between particles in z
         if isinstance( layout, GriddedLayout ):
@@ -138,7 +137,7 @@ class ContinuousInjector( object ):
         self.z_end_plasma += nz_new * self.dz_particles
 
 
-    def generate_particles( distribution, layout, comm, time ):
+    def generate_particles( self, distribution, layout, comm, time ):
         """
         Generate new particles at the right end of the plasma
         (i.e. between z_end_plasma - nz_inject*dz and z_end_plasma)

@@ -68,7 +68,7 @@ class Species(object):
 
 
     def _finalize_initialization(self, use_cuda, grid_shape, particle_shape,
-                dt, time, layout, comm, gamma_boost ):
+                dt, time, layout, comm, boost ):
         """
         TODO
         This is called by the method `add_species` of the Simulation object
@@ -84,11 +84,11 @@ class Species(object):
         if dist is not None:
             # Generate the particles in the initial box
             x, y, z, ux, uy, uz, inv_gamma, w = dist.generate_particles(
-                    layout, comm, gamma_boost, time )
+                    layout, comm, boost, time )
             # Register continuous injection if needed
             self.continuous_injection = getattr( dist, 'fill_in', False )
             if self.continuous_injection:
-                self.injector = ContinuousInjector( dist, layout )
+                self.injector = ContinuousInjector( dist, layout, comm, boost )
             else:
                 self.injector = None
 

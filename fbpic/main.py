@@ -810,7 +810,7 @@ class Simulation(object):
         # and register the particle injector
         species._finalize_initialization(
             self.use_cuda, self.grid_shape, self.particle_shape, self.dt,
-            self.time, layout, self.comm, self.gamma_boost )
+            self.time, layout, self.comm, self.boost )
 
         # Calculate the space-charge field, if requested by the user
         if calculate_self_field:
