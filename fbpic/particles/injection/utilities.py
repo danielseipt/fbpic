@@ -63,7 +63,7 @@ def generate_evenly_spaced(dens_func, t, v_m, v_th,
         zmin, _ = comm.get_zmin_zmax( local=True, with_damp=False,
                                     with_guard=False, rank=comm.rank )
     if zmax is None:
-        zmax, _ = comm.get_zmin_zmax( local=True, with_damp=False,
+        _, zmax = comm.get_zmin_zmax( local=True, with_damp=False,
                                     with_guard=False, rank=comm.rank )
     Npz = n_per_cell['z'] * int( round( (zmax-zmin)/comm.dz ) )
     Npr = n_per_cell['r'] * int( round( comm.rmax/comm.dr ) )

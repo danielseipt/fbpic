@@ -84,7 +84,7 @@ class Species(object):
         if dist is not None:
             # Generate the particles in the initial box
             x, y, z, ux, uy, uz, inv_gamma, w = dist.generate_particles(
-                    layout, comm, boost, time )
+                                            layout, comm, boost, time )
             # Register continuous injection if needed
             self.continuous_injection = getattr( dist, 'fill_in', False )
             if self.continuous_injection:
@@ -243,7 +243,7 @@ class Species(object):
 
         # Have the continuous injector generate the new particles
         x, y, z, ux, uy, uz, inv_gamma, w = self.injector.generate_particles(
-                self.distribution, self.layout, comm, time )
+                self.particle_distribution, self.particle_layout, comm, time )
 
         # Convert them to a particle buffer
         # - Float buffer

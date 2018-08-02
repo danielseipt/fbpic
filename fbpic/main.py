@@ -759,13 +759,14 @@ class Simulation(object):
                 gamma_m = np.sqrt(1. + uz_m**2 + ux_m**2 + uy_m**2)
                 beta_m = uz_m/gamma_m
                 # Transform positions and density
-                p_zmin, p_zmax = self.boost.copropag_length(                    [ p_zmin, p_zmax ], beta_object=beta_m )
+                p_zmin, p_zmax = self.boost.copropag_length(
+                                    [ p_zmin, p_zmax ], beta_object=beta_m )
                 n, = self.boost.copropag_density([ n ], beta_object=beta_m )
                 uz_m, = self.boost.longitudinal_momentum([ uz_m ])
             # Prepare the distribution
             if dens_func is not None:
                 def density_function(x, y, z):
-                    return n*dens_func( np.sqrt(x**2+y**2), z )
+                    return n*dens_func( z, np.sqrt(x**2+y**2) )
             else:
                 def density_function(x, y, z):
                     return n*np.ones_like(z)
@@ -773,7 +774,8 @@ class Simulation(object):
             distribution = PythonFunctionDistribution(
                 density_function=density_function,
                 rms_velocity_spread = [ c*ux_th, c*uy_th, c*uz_th ],
-                directed_velocity = [ c*ux_m, c*uy_m, c*uz_m ] )
+                directed_velocity = [ c*ux_m, c*uy_m, c*uz_m ],
+                fill_in=continuous_injection )
             # Prepare the Layout
             layout = GriddedLayout(
                 fill_in=continuous_injection,
@@ -792,7 +794,8 @@ class Simulation(object):
             layout = None
 
         # Create the new species
-        new_species = Species(charge=q, mass=m, initial_distribution=distribution)
+        new_species = Species(charge=q, mass=m,
+                            initial_distribution=distribution)
 
         # Add the species to the simulation
         self.add_species( new_species, layout )
