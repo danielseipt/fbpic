@@ -7,7 +7,6 @@ This file is part of the Fourier-Bessel Particle-In-Cell code (FB-PIC)
 It defines various elements of the PICMI interface
 """
 from PICMI_Base import PICMI_CylindricalGrid, PICMI_ElectromagneticSolver
-from fbpic.smoothing import BinomialSmoother # Exposed directly, unmodified
 
 class CylindricalGrid(PICMI_CylindricalGrid):
 

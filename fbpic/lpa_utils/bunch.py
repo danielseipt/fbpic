@@ -9,6 +9,7 @@ import numpy as np
 from scipy.constants import m_e, c, e, epsilon_0, mu_0
 from fbpic.fields import Fields
 from fbpic.particles.injection import BallisticBeforePlane
+from fbpic.particles.elementary_process.cuda_numba_utils import reallocate_and_copy_old
 
 def add_elec_bunch( sim, gamma0, n_e, p_zmin, p_zmax, p_rmin, p_rmax,
                 p_nr=2, p_nz=2, p_nt=4, dens_func=None, boost=None,
