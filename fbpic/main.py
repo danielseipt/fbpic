@@ -197,8 +197,6 @@ class Simulation(object):
             Determines how the charge and currents are smoothed.
             (Default: one-pass binomial filter and no compensator.)
         """
-        print 'latest wolverine version'
-        # np.random.seed(0)
 
         # Check whether to use CUDA
         self.use_cuda = use_cuda
