@@ -197,6 +197,9 @@ class Simulation(object):
             Determines how the charge and currents are smoothed.
             (Default: one-pass binomial filter and no compensator.)
         """
+        print 'latest wolverine version'
+        # np.random.seed(0)
+
         # Check whether to use CUDA
         self.use_cuda = use_cuda
         if (self.use_cuda==True) and (cuda_installed==False):
@@ -356,6 +359,8 @@ class Simulation(object):
                 progress_bar.time( i_step )
                 progress_bar.print_progress()
 
+
+
             # Particle exchanges to prepare for this iteration
             # ------------------------------------------------
 
@@ -384,10 +389,25 @@ class Simulation(object):
             if i_step == 0:
                 self.deposit('J', exchange=True)
 
+
+
+            # Main PIC iteration
+            # ------------------
+
+            # Gather the fields from the grid at t = n dt
+            for species in ptcl:
+                species.gather( fld.interp )
+
+            # Apply the external fields at t = n dt
+            for ext_field in self.external_fields:
+                ext_field.apply_expression( self.ptcl, self.time )
+
+
             # Diagnostics
             # -----------
-
-            # Run the diagnostics
+            # Run the diagnostics after gathering the fields to allow tracking
+            # of the fields along the trajectory, 
+            # and also see the external fields at the particle position
             # (E, B, rho, x are defined at time n; J, p at time n-1/2)
             for diag in self.diags:
                 # Check if the diagnostic should be written at this iteration
@@ -396,15 +416,10 @@ class Simulation(object):
                 # were smoothed/corrected, and copy the data from the GPU.)
                 diag.write( self.iteration )
 
-            # Main PIC iteration
-            # ------------------
 
-            # Gather the fields from the grid at t = n dt
-            for species in ptcl:
-                species.gather( fld.interp )
-            # Apply the external fields at t = n dt
-            for ext_field in self.external_fields:
-                ext_field.apply_expression( self.ptcl, self.time )
+            # Continue Main PIC iteration
+            # ---------------------------
+
 
             # Push the particles' positions and velocities to t = (n+1/2) dt
             if move_momenta:
